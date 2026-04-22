@@ -1,0 +1,29 @@
+QMainWindow {
+    background-color: rgb(30, 30, 46);
+    color: #ffffff;
+}
+
+QPushButton {
+    background-color: #4b0082;
+    color: #ffffff;
+    border: none;
+    padding: 10px;
+    font-family: "Cascadia Code";
+    font-size: 16pt;
+    border-radius: 5px;
+    min-width: 100px;
+}
+
+QPushButton:hover {
+    background-color: #6a0dad;
+}
+
+QPushButton:pressed {
+    background-color: #8a2be2;
+}
+
+QLabel {
+    color: #a0a0ff;
+    font-family: "Cascadia Code";
+    font-size: 16pt;
+}
