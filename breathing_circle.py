@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QWidget, QApplication
 from PyQt5.QtCore import QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve, QRectF
 from PyQt5.QtGui import QPainter, QColor, QPen, QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 START_RADIUS = 45
 END_RADIUS = 95
@@ -18,7 +18,8 @@ class BreathingCircle(QWidget):
         self.current_radius = START_RADIUS #100
         self.states = ("INHALE", "HOLD", "EXHALE")
         
-        self.is_inhaling = True
+        self.current_state = self.states[0]
+        self.index = 0
     
         self.animation_timer = QTimer()
         self.animation_timer.timeout.connect(self.animate_circle)
@@ -28,16 +29,22 @@ class BreathingCircle(QWidget):
         self.hold_duration = 7 # 7 seconds (in future addons)
         self.exhale_duration = 4  # 8 seconds
 
+        self.durations = (self.inhale_duration, self.hold_duration, self.exhale_duration)
+
         self.current_duration = self.inhale_duration
         
         # Animation properties
         self.animation_step = self.calculate_animation_step()
 
         self.animation_direction = 1.0  # 1 for inhale, -1 for exhale
+
+        self.hold_timer = QTimer()
+        self.hold_timer.setSingleShot(True)
+        self.hold_timer.timeout.connect(self.change_state)
         
     def start_animation(self):
         """Start the breathing animation"""
-        self.animation_timer.start(UPDATE_RATE)  # Update every 100ms
+        self.animation_timer.start(UPDATE_RATE)  # Update every 50ms
         
     def stop_animation(self):
         """Stop the breathing animation"""
@@ -48,21 +55,25 @@ class BreathingCircle(QWidget):
     def animate_circle(self):
         """Animate the circle size for breathing"""
         # Calculate new radius based on animation direction
-        if self.is_inhaling:
+        index_of_states = 0
+        if self.current_state == "INHALE":
             self.current_radius += self.animation_step
             if self.current_radius >= END_RADIUS:  # Max radius
-                self.is_inhaling = False
-                self.current_duration = self.exhale_duration
+                self.change_state()
+                #self.current_duration = self.exhale_duration
                 self.animation_step = self.calculate_animation_step()
                 self.animation_direction = -1
-        else:
+        elif self.current_state == "EXHALE":
             self.current_radius -= self.animation_step
             if self.current_radius <= START_RADIUS:  # Min radius
-                self.is_inhaling = True
-                self.current_duration = self.inhale_duration
+                self.change_state()
+                #self.current_duration = self.inhale_duration
                 self.animation_step = self.calculate_animation_step()
                 self.animation_direction = 1
-                
+        else:
+            self.hold_timer.start(self.hold_duration * 1000)
+
+
         self.update()  # Trigger repaint
         
     def paintEvent(self, event):
@@ -78,7 +89,13 @@ class BreathingCircle(QWidget):
         center_y = self.height() // 2
         
         # Draw circle with gradient effect
-        color = QColor(128, 0, 128) if self.is_inhaling else QColor(0, 206, 209)
+
+        if self.current_state == "INHALE":
+            color = QColor(128, 0, 128) 
+        elif self.current_state == "EXHALE":
+            color = QColor(0, 206, 209)
+        else: 
+            color = QColor(79, 175, 0)
         
         # Create a semi-transparent fill
         painter.setBrush(QColor(color.red(), color.green(), color.blue(), 80))
@@ -105,7 +122,7 @@ class BreathingCircle(QWidget):
         font.setBold(True)
         painter.setFont(font)
         
-        text = "INHALE" if self.is_inhaling else "EXHALE"
+        text = self.current_state
         
         # INHALE in coming update
         # if self.is_inhaling:
@@ -124,3 +141,8 @@ class BreathingCircle(QWidget):
 
     def calculate_animation_step(self):
         return (END_RADIUS - START_RADIUS) / (self.current_duration * (1000 / UPDATE_RATE))
+
+    def change_state(self):
+        self.index = (self.index + 1) % 3
+        self.current_state = self.states[self.index]
+        self.current_duration = self.durations[self.index]
